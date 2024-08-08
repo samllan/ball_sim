@@ -9,7 +9,7 @@ name: Deploy Flutter Web App to GitHub Pages
 on:
   push:
     branches:
-      - main  # Specifies that the workflow runs on pushes to the 'main' branch.
+      - master  # Specifies that the workflow runs on pushes to the 'main' branch.
 
 # 'jobs' defines the tasks that will be executed in the workflow.
 # Each job runs on a separate virtual machine.
