@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math';  // Import dart:math for sqrt function
 import 'ball.dart';
 
 void main() {
@@ -44,6 +45,20 @@ class _BallSimulationScreenState extends State<BallSimulationScreen> with Single
     });
   }
 
+  void _applyExplosion(double ex, double ey) {
+    final dx = _ball.x - ex;
+    final dy = _ball.y - ey;
+    final distance = sqrt(dx * dx + dy * dy);
+
+    // Simple explosion effect: Inverse distance squared
+    final force = 1000 / (distance * distance + 1);  // Add 1 to avoid division by zero
+    final fx = force * dx / distance;
+    final fy = force * dy / distance;
+
+    _ball.vx += fx;
+    _ball.vy += fy;
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -54,11 +69,16 @@ class _BallSimulationScreenState extends State<BallSimulationScreen> with Single
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Bouncing Ball Simulation'),
+        title: Text('Bouncing Ball Simulation with Explosions'),
       ),
-      body: CustomPaint(
-        painter: BallPainter(_ball),
-        child: Container(),
+      body: GestureDetector(
+        onTapDown: (details) {
+          _applyExplosion(details.localPosition.dx, details.localPosition.dy);
+        },
+        child: CustomPaint(
+          painter: BallPainter(_ball),
+          child: Container(),
+        ),
       ),
     );
   }
