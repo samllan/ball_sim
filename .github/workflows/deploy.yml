@@ -1,0 +1,79 @@
+# This is the name of the workflow. It helps to identify the workflow in the GitHub Actions UI.
+# GitHub Actions is a CI/CD service provided by GitHub to automate tasks within the software development lifecycle.
+# GitHub Actions uses YAML syntax to define workflow configurations, enabling you to create complex automation flows easily. 
+# Workflows can automate tasks like building, testing, and deploying code whenever specific events occur in your repository.
+name: Deploy Flutter Web App to GitHub Pages
+
+# The 'on' keyword specifies the events that trigger the workflow.
+# Here, the workflow will be triggered on any push to the 'main' branch.
+on:
+  push:
+    branches:
+      - main  # Specifies that the workflow runs on pushes to the 'main' branch.
+
+# 'jobs' defines the tasks that will be executed in the workflow.
+# Each job runs on a separate virtual machine.
+jobs:
+  # This is the name of the job. You can name it anything you like.
+  build-and-deploy:
+    # This specifies the type of virtual machine to run the job on.
+    # 'ubuntu-latest' means it will use the latest available Ubuntu image.
+    runs-on: ubuntu-latest
+
+    # 'steps' defines a series of tasks that will be executed in the job.
+    steps:
+      # The first step in almost any CI/CD pipeline is to fetch the current state of the codebase. 
+      # This ensures that the subsequent steps operate on the latest code.
+      # This step checks out the repository's main branch into the runner's filesystem. It includes all the files, directories, branches, and commit history up to the latest commit.
+      # It does so by using the 'actions/checkout' action.
+      # In the context of CI/CD, checking out the repository is the initial step to prepare the environment with the current state of the codebase.
+      # The 'actions/checkout' action is essential for almost all workflows as it ensures that the latest code is available to be built, tested, or deployed.
+      # This action fetches the code from the repository so that subsequent steps can access it.
+      # It includes all the files, directories, branches, commit history and working directory state up to the latest commit.
+      - name: Checkout Repository
+        uses: actions/checkout@v2  # Uses the 'actions/checkout' action from the GitHub Actions marketplace at version 2.
+
+      # The second step sets up Flutter on the runner.
+      # 'subosito/flutter-action' is a pre-built action that simplifies the process of installing and configuring Flutter on the virtual machine.
+      # This action ensures that the specified version of Flutter is installed and ready to use for subsequent steps.
+      # Setting up Flutter includes downloading the Flutter SDK, adding it to the PATH, and verifying the installation.
+      # This step is crucial because without Flutter properly set up, we cannot build the Flutter project.
+      # While it may seem excessive to download and install Flutter each time, it ensures a consistent and clean environment for each run, avoiding potential issues from environment differences.
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2  # Uses the 'subosito/flutter-action' from the GitHub Actions marketplace at version 2.
+        with:
+          # Specifies the Flutter version to use. You can change this to any version you need.
+          # Specifying the version helps to maintain consistency across different builds and avoids issues related to version incompatibility.
+          flutter-version: '3.22.3'
+
+      # The third step installs the dependencies for the Flutter project.
+      # 'run' specifies a shell command to execute.
+      # 'flutter pub get' fetches all the dependencies listed in the 'pubspec.yaml' file.
+      - name: Install Dependencies
+        run: flutter pub get
+
+      # The fourth step builds the Flutter web application.
+      # 'flutter build web --release' compiles the Flutter project into a web application.
+      # The '--release' flag indicates that this should be a production build, which is optimized and minified.
+      - name: Build Web
+        run: flutter build web --release --base-href /ball_sim/
+
+      # The fifth step moves the built files to the 'docs' directory.
+      # This step ensures that the files are in the correct location for GitHub Pages to serve them.
+      - name: Move Build to docs Directory
+        run: |
+          rm -rf docs  # Remove the existing 'docs' directory if it exists.
+          mkdir docs   # Create a new, empty 'docs' directory.
+          cp -r build/web/* docs/  # Copy all built files from 'build/web' to 'docs'.
+
+      # The sixth step commits and pushes the changes to the repository.
+      # This step uses Git commands to add, commit, and push the 'docs' directory to the 'main' branch.
+      - name: Commit and Push Changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+        run: |
+          git config --global user.name 'github-actions[bot]'  # Set the Git username for the commit.
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'  # Set the Git email for the commit.
+          git add docs  # Add the 'docs' directory to the staging area.
+          git commit -m 'Deploy built web files in docs folder to GitHub Pages' || echo 'No changes to commit'  # Commit the changes with a message. If there are no changes, print 'No changes to commit'.
+          git push origin main  # Push the changes to the 'main' branch. 
