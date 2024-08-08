@@ -27,11 +27,13 @@ class BallSimulationScreen extends StatefulWidget {
 class _BallSimulationScreenState extends State<BallSimulationScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Ball _ball;
+  late List<Explosion> _explosions;
 
   @override
   void initState() {
     super.initState();
     _ball = Ball(x: 150, y: 150, vx: 2, vy: 0, radius: 20);
+    _explosions = [];
     _controller = AnimationController(
       vsync: this,
       duration: Duration(seconds: 1),
@@ -41,7 +43,9 @@ class _BallSimulationScreenState extends State<BallSimulationScreen> with Single
 
   void _update() {
     setState(() {
-      _ball.update(MediaQuery.of(context).size.height);
+      _ball.update(300);  // Update with container height
+      _explosions.forEach((explosion) => explosion.update());
+      _explosions.removeWhere((explosion) => explosion.isFinished);
     });
   }
 
@@ -57,6 +61,9 @@ class _BallSimulationScreenState extends State<BallSimulationScreen> with Single
 
     _ball.vx += fx;
     _ball.vy += fy;
+
+    // Add explosion to the list
+    _explosions.add(Explosion(ex, ey));
   }
 
   @override
@@ -71,28 +78,61 @@ class _BallSimulationScreenState extends State<BallSimulationScreen> with Single
       appBar: AppBar(
         title: Text('Bouncing Ball Simulation with Explosions'),
       ),
-      body: GestureDetector(
-        onTapDown: (details) {
-          _applyExplosion(details.localPosition.dx, details.localPosition.dy);
-        },
-        child: CustomPaint(
-          painter: BallPainter(_ball),
-          child: Container(),
+      body: Center(
+        child: Container(
+          width: 300,
+          height: 300,
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.black, width: 2),
+          ),
+          child: GestureDetector(
+            onTapDown: (details) {
+              _applyExplosion(details.localPosition.dx, details.localPosition.dy);
+            },
+            child: CustomPaint(
+              painter: BallPainter(_ball, _explosions),
+              child: Container(),
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
+class Explosion {
+  final double x, y;
+  double radius;
+  bool isFinished;
+
+  Explosion(this.x, this.y)
+      : radius = 10,
+        isFinished = false;
+
+  void update() {
+    radius += 2;
+    if (radius > 50) {
+      isFinished = true;
+    }
+  }
+}
+
 class BallPainter extends CustomPainter {
   final Ball ball;
+  final List<Explosion> explosions;
 
-  BallPainter(this.ball);
+  BallPainter(this.ball, this.explosions);
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.blue;
     canvas.drawCircle(Offset(ball.x, ball.y), ball.radius, paint);
+
+    // Draw explosions
+    for (var explosion in explosions) {
+      paint.color = Colors.red.withOpacity(1 - explosion.radius / 50);
+      canvas.drawCircle(Offset(explosion.x, explosion.y), explosion.radius, paint);
+    }
   }
 
   @override
